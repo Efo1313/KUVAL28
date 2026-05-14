@@ -1,0 +1,38 @@
+name: IPTV_Guncelleme
+on:
+  schedule:
+    - cron: '0 * * * *' # Her saat başı otomatik çalışır
+  workflow_dispatch: # İstediğinde senin elle başlatmanı sağlar
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Araclari Kur
+        run: |
+          sudo pip install yt-dlp
+      - name: Linkleri Yenile
+        run: |
+          echo "#EXTM3U" > playlist.m3u
+          python3 -c "
+          import json, subprocess
+          try:
+              with open('link.json') as f:
+                  data = json.load(f)
+              with open('playlist.m3u', 'a') as out:
+                  for ch in data:
+                      # yt-dlp ile doğrudan youtube linki alınıyor
+                      link = subprocess.getoutput(f'yt-dlp -g {ch[\"url\"]}')
+                      if 'http' in link:
+                          out.write(f'#EXTINF:-1,{ch[\"name\"]}\\n{link}\\n')
+          except Exception as e:
+              print(f'Hata: {e}')
+          "
+      - name: GitHub'a Kaydet
+        run: |
+          git config --global user.name 'IPTV-Bot'
+          git config --global user.email 'bot@iptv.com'
+          git add playlist.m3u
+          git commit -m "Otomatik Guncelleme Yapildi" || echo "Degisiklik yok"
+          git push
